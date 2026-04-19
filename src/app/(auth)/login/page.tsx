@@ -1,54 +1,50 @@
 'use client';
 
 import React, { useState } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
   Card,
   CardContent,
-  TextField,
   Button,
   Typography,
-  Alert,
-  CircularProgress,
   Stack,
+  CircularProgress,
+  TextField,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Avatar from '@mui/material/Avatar';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated } = useAuth();
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { status } = useSession();
+  const [teamId, setTeamId] = useState('');
 
-  // 既にログイン済みならリダイレクト
   React.useEffect(() => {
-    if (isAuthenticated) {
+    if (status === 'authenticated') {
       router.push('/prompts');
     }
-  }, [isAuthenticated, router]);
+  }, [status, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
+  if (status === 'loading') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-    try {
-      if (!email || !password) {
-        setError('メールアドレスとパスワードを入力してください');
-        return;
-      }
-      await login(email, password);
-      router.push('/prompts');
-    } catch {
-      setError('ログインに失敗しました。もう一度お試しください。');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleLogin = () => {
+    sessionStorage.setItem('login-teamId', teamId.trim());
+    signIn('microsoft-entra-id', { redirectTo: '/login/verify' });
   };
 
   return (
@@ -82,56 +78,39 @@ export default function LoginPage() {
             </Typography>
           </Stack>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+          <TextField
+            label="Team ID"
+            fullWidth
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="チームIDを入力"
+          />
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="メールアドレス"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              autoComplete="email"
-              autoFocus
-            />
-            <TextField
-              fullWidth
-              label="パスワード"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              autoComplete="current-password"
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={isSubmitting}
-              sx={{ mt: 3, mb: 1, py: 1.5 }}
-            >
-              {isSubmitting ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                'ログイン'
-              )}
-            </Button>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', textAlign: 'center', mt: 1 }}
-            >
-              デモ用：任意のメールアドレスとパスワードでログインできます
-            </Typography>
-          </Box>
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={handleLogin}
+            disabled={!teamId.trim()}
+            sx={{ mt: 1, py: 1.5 }}
+          >
+            Microsoft アカウントでログイン
+          </Button>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ display: 'block', textAlign: 'center', mt: 2 }}
+          >
+            アカウントをお持ちでないですか？{' '}
+            <a href="/signup" style={{ color: '#1976d2', textDecoration: 'none' }}>
+              サインアップ
+            </a>
+          </Typography>
         </CardContent>
       </Card>
     </Box>
   );
 }
+

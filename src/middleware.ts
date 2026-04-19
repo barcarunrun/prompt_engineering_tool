@@ -1,0 +1,16 @@
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
+
+const { auth } = NextAuth(authConfig);
+export default auth;
+
+export const config = {
+  matcher: [
+    '/prompts/:path*',
+    '/users/:path*',
+    '/teams/:path*',
+    '/signup/complete',
+    '/login',
+    '/login/verify',
+  ],
+};

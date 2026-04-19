@@ -1,15 +1,33 @@
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'member' | 'viewer';
-  avatarUrl?: string;
+import 'next-auth';
+import 'next-auth/jwt';
+
+declare module 'next-auth' {
+  interface User {
+    role?: string;
+    isRegistered?: boolean;
+    teamId?: string | null;
+  }
+
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role: string;
+      isRegistered: boolean;
+      teamId?: string | null;
+    };
+  }
 }
 
-export interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+declare module 'next-auth/jwt' {
+  interface JWT {
+    role?: string;
+    isRegistered?: boolean;
+    teamId?: string | null;
+  }
 }
+
+export type UserRole = 'admin' | 'member' | 'viewer';
+

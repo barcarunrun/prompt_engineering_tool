@@ -44,9 +44,9 @@ export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
                     bgcolor:
                       selectedModel.provider === 'OpenAI'
                         ? '#10a37f'
-                        : selectedModel.provider === 'Anthropic'
-                        ? '#d97757'
-                        : '#4285f4',
+                        : selectedModel.provider === 'Groq'
+                        ? '#f55036'
+                        : '#666',
                     color: 'white',
                   }}
                 />

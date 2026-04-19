@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -17,14 +18,18 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ScienceIcon from '@mui/icons-material/Science';
 import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
-import { MOCK_PROMPTS } from '@/constants/prompts';
-import { LLM_MODELS } from '@/constants/models';
-import { PromptStatus } from '@/types/prompt';
+import { LLM_MODELS, DEFAULT_MODEL_ID } from '@/constants/models';
+import { Prompt, PromptStatus } from '@/types/prompt';
 
 const STATUS_CONFIG: Record<PromptStatus, { label: string; color: 'success' | 'warning' | 'default' }> = {
   published: { label: '公開中', color: 'success' },
@@ -53,15 +58,65 @@ function formatDate(dateStr: string): string {
 
 const PROVIDER_COLORS: Record<string, string> = {
   OpenAI: '#10a37f',
-  Anthropic: '#d4a574',
-  Google: '#4285f4',
+  Groq: '#f55036',
 };
 
 export default function PromptsListPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PromptStatus | 'all'>('all');
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const filteredPrompts = MOCK_PROMPTS.filter((prompt) => {
+  useEffect(() => {
+    fetchPrompts();
+  }, []);
+
+  const fetchPrompts = async () => {
+    try {
+      const res = await fetch('/api/prompts');
+      if (res.ok) {
+        const data = await res.json();
+        setPrompts(data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName,
+          description: newDescription,
+          content: '',
+          modelId: DEFAULT_MODEL_ID,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCreateOpen(false);
+        setNewName('');
+        setNewDescription('');
+        router.push(`/prompts/verify?id=${data.id}`);
+      } else {
+        console.error('Failed to create prompt');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const filteredPrompts = prompts.filter((prompt) => {
     const matchesSearch =
       !searchQuery ||
       prompt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,9 +140,9 @@ export default function PromptsListPage() {
       >
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
           <Typography variant="h5">プロンプト一覧</Typography>
-          <Chip label={`${MOCK_PROMPTS.length}件`} size="small" variant="outlined" />
+          <Chip label={`${prompts.length}件`} size="small" variant="outlined" />
         </Stack>
-        <Button variant="contained" startIcon={<AddIcon />} size="medium">
+        <Button variant="contained" startIcon={<AddIcon />} size="medium" onClick={() => setCreateOpen(true)}>
           新規作成
         </Button>
       </Box>
@@ -126,7 +181,11 @@ export default function PromptsListPage() {
       </Stack>
 
       {/* プロンプト一覧 */}
-      {filteredPrompts.length === 0 ? (
+      {loading ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : filteredPrompts.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="body1" color="text.secondary">
             該当するプロンプトが見つかりません
@@ -230,6 +289,37 @@ export default function PromptsListPage() {
           })}
         </Grid>
       )}
+
+      {/* 新規作成ダイアログ */}
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>新規プロンプト作成</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="プロンプト名"
+            fullWidth
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="説明"
+            fullWidth
+            multiline
+            rows={3}
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateOpen(false)}>キャンセル</Button>
+          <Button onClick={handleCreate} variant="contained" disabled={creating || !newName.trim()}>
+            {creating ? <CircularProgress size={20} /> : '作成'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

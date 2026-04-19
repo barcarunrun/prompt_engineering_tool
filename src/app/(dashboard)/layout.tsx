@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, CircularProgress } from '@mui/material';
-import { useAuth } from '@/hooks/useAuth';
+import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
 export default function DashboardGroupLayout({
@@ -11,16 +11,20 @@ export default function DashboardGroupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (status === 'unauthenticated') {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+    // ログイン済みだが未登録 → サインアップ完了ページへ
+    if (status === 'authenticated' && !(session?.user as { isRegistered?: boolean })?.isRegistered) {
+      router.push('/signup/complete');
+    }
+  }, [status, session, router]);
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
       <Box
         sx={{
@@ -35,9 +39,14 @@ export default function DashboardGroupLayout({
     );
   }
 
-  if (!isAuthenticated) {
+  if (status !== 'authenticated') {
+    return null;
+  }
+
+  if (!(session?.user as { isRegistered?: boolean })?.isRegistered) {
     return null;
   }
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }
+

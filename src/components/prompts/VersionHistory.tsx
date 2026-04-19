@@ -18,59 +18,14 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { PromptVersion } from '@/types/prompt';
 
-// ダミーのバージョン履歴データ
-const MOCK_VERSIONS: PromptVersion[] = [
-  {
-    id: 'v5',
-    version: 5,
-    content:
-      '以下のテキストを日本語で要約してください。要約は{{maxLength}}文字以内で、重要なポイントを箇条書きにしてください。\n\nテキスト:\n{{text}}',
-    createdAt: '2026-04-19T10:30:00',
-    createdBy: 'テストユーザー',
-    description: '箇条書き形式を追加',
-  },
-  {
-    id: 'v4',
-    version: 4,
-    content:
-      '以下のテキストを要約してください。要約は{{maxLength}}文字以内にしてください。\n\nテキスト:\n{{text}}',
-    createdAt: '2026-04-18T15:20:00',
-    createdBy: 'テストユーザー',
-    description: '文字数制限パラメータを追加',
-  },
-  {
-    id: 'v3',
-    version: 3,
-    content:
-      '以下のテキストを要約してください。できるだけ簡潔にまとめてください。\n\nテキスト:\n{{text}}',
-    createdAt: '2026-04-17T09:15:00',
-    createdBy: '田中太郎',
-    description: '簡潔さの指示を追加',
-  },
-  {
-    id: 'v2',
-    version: 2,
-    content: '以下のテキストを要約してください。\n\nテキスト:\n{{text}}',
-    createdAt: '2026-04-16T14:00:00',
-    createdBy: '田中太郎',
-    description: '変数プレースホルダーを導入',
-  },
-  {
-    id: 'v1',
-    version: 1,
-    content: '以下のテキストを要約してください。',
-    createdAt: '2026-04-15T11:00:00',
-    createdBy: 'テストユーザー',
-    description: '初版作成',
-  },
-];
-
 interface VersionHistoryProps {
+  versions?: PromptVersion[];
   onRestore: (content: string) => void;
   currentVersion?: number;
 }
 
 export default function VersionHistory({
+  versions = [],
   onRestore,
   currentVersion,
 }: VersionHistoryProps) {
@@ -118,7 +73,7 @@ export default function VersionHistory({
           mx: -1,
         }}
       >
-        {MOCK_VERSIONS.map((version, index) => (
+        {versions.map((version, index) => (
           <React.Fragment key={version.id}>
             <ListItem
               disablePadding
@@ -153,7 +108,7 @@ export default function VersionHistory({
               >
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
                         label={`v${version.version}`}
                         size="small"
@@ -170,7 +125,7 @@ export default function VersionHistory({
                     </Box>
                   }
                   secondary={
-                    <Box sx={{ mt: 0.5 }}>
+                    <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary">
                         {formatDate(version.createdAt)} · {version.createdBy}
                       </Typography>
@@ -179,7 +134,7 @@ export default function VersionHistory({
                 />
               </ListItemButton>
             </ListItem>
-            {index < MOCK_VERSIONS.length - 1 && (
+            {index < versions.length - 1 && (
               <Divider variant="middle" component="li" sx={{ my: 0.5 }} />
             )}
           </React.Fragment>

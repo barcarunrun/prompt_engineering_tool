@@ -1,12 +1,14 @@
 'use client';
 
-import { useContext } from 'react';
-import { AuthContext } from '@/components/providers/AuthProvider';
+import { useSession, signOut } from 'next-auth/react';
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const { data: session, status } = useSession();
+
+  return {
+    user: session?.user ?? null,
+    isAuthenticated: status === 'authenticated',
+    isLoading: status === 'loading',
+    logout: () => signOut({ redirectTo: '/login' }),
+  };
 }

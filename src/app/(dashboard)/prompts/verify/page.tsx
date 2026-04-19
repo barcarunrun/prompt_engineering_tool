@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Box, Grid, Typography, Stack, Chip, Button, IconButton, Tooltip } from '@mui/material';
+import { Box, Grid, Typography, Stack, Chip, Button, IconButton, Tooltip, TextField, Snackbar, Alert } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import TargetTextEditor from '@/components/prompts/TargetTextEditor';
 import VersionHistory from '@/components/prompts/VersionHistory';
 import ModelSelector from '@/components/prompts/ModelSelector';
 import { DEFAULT_MODEL_ID } from '@/constants/models';
-import { MOCK_PROMPTS } from '@/constants/prompts';
+import { PromptVersion } from '@/types/prompt';
 
 export default function PromptVerifyPage() {
   const searchParams = useSearchParams();
@@ -28,18 +28,48 @@ export default function PromptVerifyPage() {
     total: number;
   } | undefined>(undefined);
   const [promptName, setPromptName] = useState('');
-  const [currentVersion, setCurrentVersion] = useState(5);
+  const [currentVersion, setCurrentVersion] = useState(1);
+  const [versions, setVersions] = useState<PromptVersion[]>([]);
+  const [variables, setVariables] = useState<Record<string, string>>({});
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success',
+  });
 
-  // クエリパラメータからプロンプトを読み込む
+  // Extract variables from prompt
+  const detectedVars = React.useMemo(() => {
+    const matches = promptText.match(/\{\{(\w+)\}\}/g);
+    if (!matches) return [];
+    return [...new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, '')))];
+  }, [promptText]);
+
+  // Load prompt data from API
   useEffect(() => {
     if (promptId) {
-      const found = MOCK_PROMPTS.find((p) => p.id === promptId);
-      if (found) {
-        setPromptText(found.content);
-        setSelectedModel(found.modelId);
-        setPromptName(found.name);
-        setCurrentVersion(found.latestVersion);
+      fetch(`/api/prompts/${promptId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setPromptText(data.content || '');
+          setSelectedModel(data.modelId || DEFAULT_MODEL_ID);
+          setPromptName(data.name || '');
+          setCurrentVersion(data.latestVersion || 1);
+          if (data.versions) {
+            setVersions(data.versions);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [promptId]);
+
+  const fetchVersions = useCallback(async () => {
+    if (!promptId) return;
+    try {
+      const res = await fetch(`/api/prompts/${promptId}/versions`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersions(data);
       }
+    } catch (e) {
+      console.error(e);
     }
   }, [promptId]);
 
@@ -49,25 +79,71 @@ export default function PromptVerifyPage() {
     setResult('');
     setTokenUsage(undefined);
 
-    // モック実行: 2秒の遅延後にダミー結果を返す
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      let res: Response;
+      if (promptId) {
+        // DB保存済みプロンプトの場合
+        res = await fetch(`/api/prompts/${promptId}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetText,
+            variables,
+            modelId: selectedModel,
+          }),
+        });
+      } else {
+        // 未保存 / 直接アクセスの場合
+        res = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: promptText,
+            targetText,
+            variables,
+            modelId: selectedModel,
+          }),
+        });
+      }
 
-    const mockResult = `【実行結果 - モックデータ】\n\n使用モデル: ${selectedModel}\n\n--- プロンプト適用結果 ---\n\n${
-      targetText
-        ? `入力テキストに対してプロンプトを適用しました。\n\n「${targetText.substring(0, 100)}${
-            targetText.length > 100 ? '...' : ''
-          }」\n\nに対する処理結果がここに表示されます。\n\n※ 実際のLLM API連携後は、AIモデルの応答がここに表示されます。`
-        : 'プロンプトの実行結果がここに表示されます。\n\n※ 「適用テキスト」エリアにテキストを入力して実行すると、\nプロンプトがそのテキストに適用された結果が表示されます。'
-    }`;
+      const data = await res.json();
+      if (!res.ok) {
+        setResult(`エラー: ${data.error || '実行に失敗しました'}`);
+      } else {
+        setResult(data.output);
+        setTokenUsage(data.tokenUsage);
+      }
+    } catch {
+      setResult('エラー: ネットワークエラーが発生しました');
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [promptText, targetText, selectedModel, promptId, variables]);
 
-    setResult(mockResult);
-    setTokenUsage({
-      prompt: Math.floor(Math.random() * 500) + 100,
-      completion: Math.floor(Math.random() * 300) + 50,
-      total: Math.floor(Math.random() * 800) + 150,
-    });
-    setIsExecuting(false);
-  }, [promptText, targetText, selectedModel]);
+  const handleSave = useCallback(async () => {
+    if (!promptId) return;
+    try {
+      const res = await fetch(`/api/prompts/${promptId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: promptText,
+          modelId: selectedModel,
+          description: `v${currentVersion + 1} 保存`,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentVersion(data.latestVersion);
+        await fetchVersions();
+        setSnackbar({ open: true, message: '保存しました', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: '保存に失敗しました', severity: 'error' });
+      }
+    } catch {
+      setSnackbar({ open: true, message: '保存に失敗しました', severity: 'error' });
+    }
+  }, [promptId, promptText, selectedModel, currentVersion, fetchVersions]);
 
   const handleRestoreVersion = useCallback((content: string) => {
     setPromptText(content);
@@ -104,11 +180,33 @@ export default function PromptVerifyPage() {
             variant="outlined"
             startIcon={<SaveIcon />}
             size="medium"
+            onClick={handleSave}
           >
             保存
           </Button>
         </Stack>
       </Box>
+
+      {/* 変数入力エリア */}
+      {detectedVars.length > 0 && (
+        <Box sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            変数の値を入力
+          </Typography>
+          <Stack direction="row" sx={{ gap: 2, flexWrap: 'wrap' }}>
+            {detectedVars.map((v) => (
+              <TextField
+                key={v}
+                label={`{{${v}}}`}
+                size="small"
+                value={variables[v] || ''}
+                onChange={(e) => setVariables((prev) => ({ ...prev, [v]: e.target.value }))}
+                sx={{ minWidth: 200 }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
 
       {/* 3カラムレイアウト */}
       <Grid container spacing={2.5} sx={{ height: 'calc(100vh - 180px)' }}>
@@ -131,9 +229,23 @@ export default function PromptVerifyPage() {
 
         {/* 右: バージョン履歴 */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <VersionHistory onRestore={handleRestoreVersion} currentVersion={currentVersion} />
+          <VersionHistory
+            versions={versions}
+            onRestore={handleRestoreVersion}
+            currentVersion={currentVersion}
+          />
         </Grid>
       </Grid>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      >
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar((s) => ({ ...s, open: false }))}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

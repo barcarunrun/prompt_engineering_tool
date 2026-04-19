@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Drawer,
@@ -14,13 +14,18 @@ import {
   Typography,
   Box,
   Divider,
+  Button,
 } from '@mui/material';
-import EditNoteIcon from '@mui/icons-material/EditNote';
-import DescriptionIcon from '@mui/icons-material/Description';
-import SettingsIcon from '@mui/icons-material/Settings';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ListAltIcon from '@mui/icons-material/ListAlt';
-import ScienceIcon from '@mui/icons-material/Science';
+import PeopleIcon from '@mui/icons-material/People';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
+import DataObjectIcon from '@mui/icons-material/DataObject';
+import StorageIcon from '@mui/icons-material/Storage';
+import GroupsIcon from '@mui/icons-material/Groups';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from '@/hooks/useAuth';
+import { useSession } from 'next-auth/react';
 
 const DRAWER_WIDTH = 240;
 
@@ -36,29 +41,57 @@ const NAV_ITEMS = [
     href: '/prompts',
     icon: <ListAltIcon />,
     exact: true,
+    adminOnly: false,
   },
   {
-    label: 'プロンプト検証',
-    href: '/prompts/verify',
-    icon: <ScienceIcon />,
+    label: 'プロンプト一括検証',
+    href: '/prompts/batch-verify',
+    icon: <PlaylistPlayIcon />,
     exact: false,
+    adminOnly: false,
   },
   {
-    label: 'テンプレート',
-    href: '/templates',
-    icon: <DescriptionIcon />,
+    label: '適用テキストJSON作成',
+    href: '/prompts/build-json',
+    icon: <DataObjectIcon />,
     exact: false,
+    adminOnly: false,
   },
   {
-    label: '設定',
-    href: '/settings',
-    icon: <SettingsIcon />,
+    label: '保存済みテキスト一覧',
+    href: '/prompts/target-texts',
+    icon: <StorageIcon />,
     exact: false,
+    adminOnly: false,
+  },
+  {
+    label: 'ユーザ管理',
+    href: '/users',
+    icon: <PeopleIcon />,
+    exact: false,
+    adminOnly: true,
+  },
+  {
+    label: 'チーム管理',
+    href: '/teams',
+    icon: <GroupsIcon />,
+    exact: false,
+    adminOnly: true,
   },
 ];
 
 export default function Sidebar({ open, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role;
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || userRole === 'admin');
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   const drawerContent = (
     <>
@@ -78,7 +111,7 @@ export default function Sidebar({ open, onClose, isMobile }: SidebarProps) {
       <Divider />
       <Box sx={{ px: 1, py: 1 }}>
         <List disablePadding>
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.exact
               ? pathname === item.href
               : pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -123,6 +156,38 @@ export default function Sidebar({ open, onClose, isMobile }: SidebarProps) {
               </ListItem>
             );
           })}
+        </List>
+      </Box>
+      <Box sx={{ flexGrow: 1 }} />
+      <Divider />
+      <Box sx={{ px: 1, py: 1 }}>
+        <List disablePadding>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={handleLogout}
+              sx={{
+                borderRadius: 1,
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'error.50',
+                  color: 'error.main',
+                  '& .MuiListItemIcon-root': {
+                    color: 'error.main',
+                  },
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="ログアウト"
+                slotProps={{
+                  primary: { sx: { fontSize: '0.875rem', fontWeight: 400 } },
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
         </List>
       </Box>
     </>

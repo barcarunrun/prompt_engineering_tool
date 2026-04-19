@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── NextAuth Models ───
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  password  String   // bcrypt hashed
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("member") // admin | member | viewer
+  isRegistered  Boolean   @default(false)
+  teamId        String?
+  team          Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  accounts      Account[]
+  sessions      Session[]
+  prompts        Prompt[]
+  promptVersions PromptVersion[]
+  targetTextSets TargetTextSet[]
+  createdAt      DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Prompt Models ───
+
+model Prompt {
+  id            String            @id @default(cuid())
+  name          String
+  description   String            @default("")
+  content       String            @db.Text
+  modelId       String
+  status        String            @default("draft") // draft | published | archived
+  latestVersion Int               @default(1)
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions      PromptVersion[]
+  executions    PromptExecution[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model PromptVersion {
+  id          String            @id @default(cuid())
+  promptId    String
+  prompt      Prompt            @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  version     Int
+  content     String            @db.Text
+  description String            @default("")
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions  PromptExecution[]
+  createdAt   DateTime          @default(now())
+}
+
+model PromptExecution {
+  id              String         @id @default(cuid())
+  promptId        String
+  prompt          Prompt         @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  versionId       String?
+  version         PromptVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  modelId         String
+  input           String         @db.Text
+  output          String         @db.Text
+  promptTokens    Int            @default(0)
+  completionTokens Int           @default(0)
+  totalTokens     Int            @default(0)
+  createdAt       DateTime       @default(now())
+}
+
+// ─── Target Text Sets ───
+
+model TargetTextSet {
+  id        String   @id @default(cuid())
+  name      String
+  texts     String   @db.Text // JSON array stored as string
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
