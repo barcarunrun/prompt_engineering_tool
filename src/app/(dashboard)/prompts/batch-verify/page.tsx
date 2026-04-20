@@ -381,6 +381,15 @@ export default function BatchVerifyPage() {
           disabled={isRunning}
           size="small"
         />
+        <Button
+          variant="outlined"
+          size="small"
+          sx={{ mt: 1 }}
+          onClick={handleJsonImport}
+          disabled={isRunning || !jsonInput.trim()}
+        >
+          JSONから登録
+        </Button>
         {jsonError && (
           <Alert severity="error" sx={{ mt: 1 }}>
             {jsonError}

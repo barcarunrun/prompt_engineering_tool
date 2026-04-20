@@ -32,7 +32,7 @@ LLM（大規模言語モデル）に与えるプロンプトの**作成・テス
 - 誰がいつ変更したかの記録
 
 ### LLMモデル選択
-- 複数のLLMプロバイダー（OpenAI / Anthropic / Google）に対応
+- 複数のLLMプロバイダー（OpenAI / Groq）に対応
 - モデルごとの特性（コンテキスト長・用途）を確認しながら選択
 - モデルを切り替えてプロンプトの出力品質を比較
 
@@ -76,7 +76,7 @@ LLM（大規模言語モデル）に与えるプロンプトの**作成・テス
 | 認証 | NextAuth.js v5 + Microsoft Entra ID |
 | ORM | Prisma v7 |
 | データベース | PostgreSQL (Azure Database for PostgreSQL Flexible Server) |
-| デプロイ | Azure Container Apps (Consumption) |
+| デプロイ | Azure Web Apps (GitHub Actions による自動デプロイ) |
 
 ## セットアップ
 
