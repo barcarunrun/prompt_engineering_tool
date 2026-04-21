@@ -15,7 +15,8 @@ export async function POST(
 
   const { id } = await params;
   const body = await request.json();
-  const { targetText, variables, modelId } = body as {
+  const { prompt: promptOverride, targetText, variables, modelId } = body as {
+    prompt?: string;
     targetText?: string;
     variables?: Record<string, string>;
     modelId?: string;
@@ -35,9 +36,10 @@ export async function POST(
   }
 
   const model = modelId ?? prompt.modelId;
+  const promptContent = promptOverride?.trim() ? promptOverride : prompt.content;
 
   // Substitute variables in prompt content
-  let processedPrompt = prompt.content;
+  let processedPrompt = promptContent;
   if (variables && Object.keys(variables).length > 0) {
     processedPrompt = substituteVariables(processedPrompt, variables);
   }
