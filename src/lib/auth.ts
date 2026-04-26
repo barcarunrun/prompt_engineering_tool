@@ -9,6 +9,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: 'jwt' },
   callbacks: {
     ...authConfig.callbacks,
+    async signIn({ user }) {
+      if (!user.email) return false;
+      await prisma.user.upsert({
+        where: { email: user.email },
+        update: { isRegistered: true },
+        create: {
+          email: user.email,
+          name: user.name ?? null,
+          image: user.image ?? null,
+          role: 'member',
+          isRegistered: true,
+        },
+      });
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       if (user) {
         token.sub = user.id;

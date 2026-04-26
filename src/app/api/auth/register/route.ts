@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
@@ -11,36 +10,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const { name, teamId, teamPassword } = await request.json();
+    const { name } = await request.json();
 
-    // Team検証
-    if (!teamId || !teamPassword) {
-      return NextResponse.json({ error: 'Team IDとTeam Passwordは必須です' }, { status: 400 });
-    }
-
-    // teamIdがidまたはnameに一致するTeamを検索
-    const team = await prisma.team.findFirst({
-      where: {
-        OR: [{ id: teamId }, { name: teamId }],
-      },
-    });
-
-    if (!team) {
-      return NextResponse.json({ error: 'Team IDが見つかりません' }, { status: 400 });
-    }
-
-    const passwordMatch = await bcrypt.compare(teamPassword, team.password);
-    if (!passwordMatch) {
-      return NextResponse.json({ error: 'Team Passwordが正しくありません' }, { status: 400 });
-    }
-
-    // upsert: ユーザーが存在しない場合は作成、存在する場合は更新
     const user = await prisma.user.upsert({
       where: { email: session.user.email },
       update: {
         isRegistered: true,
-        role: 'member',
-        teamId: team.id,
         ...(name ? { name } : {}),
       },
       create: {
@@ -48,7 +23,6 @@ export async function POST(request: Request) {
         name: name || session.user.name || null,
         role: 'member',
         isRegistered: true,
-        teamId: team.id,
       },
     });
 

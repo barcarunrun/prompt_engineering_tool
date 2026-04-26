@@ -32,9 +32,16 @@ LLM（大規模言語モデル）に与えるプロンプトの**作成・テス
 - 誰がいつ変更したかの記録
 
 ### LLMモデル選択
-- 複数のLLMプロバイダー（OpenAI / Groq）に対応
+- Groq・OpenAI の計4モデルに対応
 - モデルごとの特性（コンテキスト長・用途）を確認しながら選択
 - モデルを切り替えてプロンプトの出力品質を比較
+
+| モデル名 | プロバイダー | 特徴 |
+|---|---|---|
+| GPT-OSS 20B | Groq | 高速軽量オープンウェイトモデル |
+| GPT-OSS 120B | Groq | 高性能オープンウェイトモデル |
+| GPT-5.4 Mini | OpenAI | レイテンシ・コスト重視の高速処理 |
+| GPT-5.4 Nano | OpenAI | 大量処理・単純タスク・低コスト最優先 |
 
 ### プロンプト一括検証 (`/prompts/batch-verify`)
 - 複数の対象テキストに対してプロンプトを一括実行
@@ -69,13 +76,14 @@ LLM（大規模言語モデル）に与えるプロンプトの**作成・テス
 
 | カテゴリ | 技術 |
 |---|---|
-| フレームワーク | Next.js 16 (App Router) |
-| 言語 | TypeScript |
+| フレームワーク | Next.js 16.2.4 (App Router) |
+| 言語 | TypeScript 5 |
 | UIライブラリ | MUI (Material UI) v9 |
 | スタイリング | Emotion (CSS-in-JS) |
-| 認証 | NextAuth.js v5 + Microsoft Entra ID |
+| 認証 | NextAuth.js v5 (beta) + Microsoft Entra ID |
 | ORM | Prisma v7 |
-| データベース | PostgreSQL (Azure Database for PostgreSQL Flexible Server) |
+| データベース | PostgreSQL (Azure Cosmos DB for PostgreSQL) |
+| LLM | OpenAI API / Groq API |
 | デプロイ | Azure Web Apps (GitHub Actions による自動デプロイ) |
 
 ## セットアップ
@@ -108,6 +116,9 @@ AUTH_MICROSOFT_ENTRA_ID_ISSUER=https://login.microsoftonline.com/<テナントID
 AUTH_SECRET=<npx auth secret で生成>
 AUTH_URL=http://localhost:3000
 DATABASE_URL=postgresql://user:password@localhost:5432/prompt_tool
+# LLM API Keys
+OPENAI_API_KEY=<OpenAI APIキー>
+GROQ_API_KEY=<Groq APIキー>
 ```
 
 ### 3. Prisma クライアント生成 & DB マイグレーション
@@ -117,7 +128,13 @@ npx prisma generate
 npx prisma migrate dev --name init
 ```
 
-### 4. 開発サーバーの起動
+### 4. （任意）シードデータの投入
+
+```bash
+npx prisma db seed
+```
+
+### 5. 開発サーバーの起動
 
 ```bash
 npm run dev

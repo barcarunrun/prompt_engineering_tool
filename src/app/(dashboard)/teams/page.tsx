@@ -67,7 +67,6 @@ export default function TeamsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [teamName, setTeamName] = useState('');
-  const [teamPassword, setTeamPassword] = useState('');
   const [dialogError, setDialogError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -94,7 +93,6 @@ export default function TeamsPage() {
   const openCreateDialog = () => {
     setEditingTeam(null);
     setTeamName('');
-    setTeamPassword('');
     setDialogError('');
     setDialogOpen(true);
   };
@@ -102,7 +100,6 @@ export default function TeamsPage() {
   const openEditDialog = (team: Team) => {
     setEditingTeam(team);
     setTeamName(team.name);
-    setTeamPassword('');
     setDialogError('');
     setDialogOpen(true);
   };
@@ -113,17 +110,12 @@ export default function TeamsPage() {
       setDialogError('チーム名は必須です');
       return;
     }
-    if (!editingTeam && !teamPassword.trim()) {
-      setDialogError('パスワードは必須です');
-      return;
-    }
 
     setSaving(true);
     try {
       const url = editingTeam ? `/api/teams/${editingTeam.id}` : '/api/teams';
       const method = editingTeam ? 'PUT' : 'POST';
       const body: Record<string, string> = { name: teamName.trim() };
-      if (teamPassword.trim()) body.password = teamPassword.trim();
 
       const res = await fetch(url, {
         method,
@@ -247,13 +239,6 @@ export default function TeamsPage() {
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
             sx={{ mt: 1, mb: 2 }}
-          />
-          <TextField
-            label={editingTeam ? 'パスワード（変更する場合のみ）' : 'パスワード'}
-            type="password"
-            fullWidth
-            value={teamPassword}
-            onChange={(e) => setTeamPassword(e.target.value)}
           />
         </DialogContent>
         <DialogActions>

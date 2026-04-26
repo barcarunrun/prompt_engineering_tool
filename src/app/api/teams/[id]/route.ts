@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,20 +15,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const { name, password } = await request.json();
+    const { name } = await request.json();
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'チーム名は必須です' }, { status: 400 });
     }
 
-    const data: { name: string; password?: string } = { name: name.trim() };
-    if (password?.trim()) {
-      data.password = await bcrypt.hash(password, 10);
-    }
-
     const team = await prisma.team.update({
       where: { id },
-      data,
+      data: { name: name.trim() },
     });
 
     return NextResponse.json({ id: team.id, name: team.name });

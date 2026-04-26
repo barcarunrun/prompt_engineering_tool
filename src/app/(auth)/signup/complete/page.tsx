@@ -1,8 +1,20 @@
 'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Box, CircularProgress } from '@mui/material';
+
+export default function SignUpCompletePage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/prompts');
+  }, [router]);
+  return (
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <CircularProgress />
+    </Box>
+  );
+}
 import {
   Box,
   Card,

@@ -9,8 +9,6 @@ export const config = {
     '/prompts/:path*',
     '/users/:path*',
     '/teams/:path*',
-    '/signup/complete',
     '/login',
-    '/login/verify',
   ],
 };

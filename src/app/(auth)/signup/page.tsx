@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import {
   Box,
@@ -9,10 +8,61 @@ import {
   Button,
   Typography,
   Stack,
-  TextField,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Avatar from '@mui/material/Avatar';
+
+export default function SignUpPage() {
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        px: 2,
+      }}
+    >
+      <Card sx={{ maxWidth: 440, width: '100%', boxShadow: 3 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Stack direction="column" sx={{ alignItems: 'center', gap: 2, mb: 4 }}>
+            <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48 }}>
+              <LockOutlinedIcon />
+            </Avatar>
+            <Typography variant="h5" component="h1">
+              サインアップ
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Microsoft アカウントで新規登録します
+            </Typography>
+          </Stack>
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={() => signIn('microsoft-entra-id', { redirectTo: '/prompts' })}
+            sx={{ py: 1.5 }}
+          >
+            Microsoft アカウントで登録
+          </Button>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ display: 'block', textAlign: 'center', mt: 2 }}
+          >
+            既にアカウントをお持ちですか？{' '}
+            <a href="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
+              ログイン
+            </a>
+          </Typography>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
 
 export default function SignUpPage() {
   const [teamId, setTeamId] = useState('');

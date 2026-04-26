@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,10 +11,74 @@ import {
   Typography,
   Stack,
   CircularProgress,
-  TextField,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Avatar from '@mui/material/Avatar';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { status } = useSession();
+
+  React.useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/prompts');
+    }
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        px: 2,
+      }}
+    >
+      <Card sx={{ maxWidth: 440, width: '100%', boxShadow: 3 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Stack direction="column" sx={{ alignItems: 'center', gap: 2, mb: 4 }}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+              <LockOutlinedIcon />
+            </Avatar>
+            <Typography variant="h5" component="h1">
+              Prompt Engineering Tool
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              チームのプロンプト管理を効率化
+            </Typography>
+          </Stack>
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={() => signIn('microsoft-entra-id', { redirectTo: '/prompts' })}
+            sx={{ py: 1.5 }}
+          >
+            Microsoft アカウントでサインイン
+          </Button>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();

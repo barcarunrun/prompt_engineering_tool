@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 
 export async function GET() {
   try {
@@ -41,10 +40,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 });
     }
 
-    const { name, password } = await request.json();
+    const { name } = await request.json();
 
-    if (!name?.trim() || !password?.trim()) {
-      return NextResponse.json({ error: 'チーム名とパスワードは必須です' }, { status: 400 });
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'チーム名は必須です' }, { status: 400 });
     }
 
     const existing = await prisma.team.findUnique({ where: { name: name.trim() } });
@@ -52,12 +51,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'このチーム名は既に使用されています' }, { status: 409 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const team = await prisma.team.create({
       data: {
         name: name.trim(),
-        password: hashedPassword,
       },
     });
 

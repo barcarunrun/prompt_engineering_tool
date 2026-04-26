@@ -11,6 +11,7 @@ export async function GET() {
         image: true,
         role: true,
         isRegistered: true,
+        teamId: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
