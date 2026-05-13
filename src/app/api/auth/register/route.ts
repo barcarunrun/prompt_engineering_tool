@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
+    const userEmail = session.user.email;
 
     const body = (await request.json()) as {
       name?: string;
@@ -53,14 +54,14 @@ export async function POST(request: Request) {
       });
 
       const user = await transaction.user.upsert({
-        where: { email: session.user.email },
+        where: { email: userEmail },
         update: {
           isRegistered: true,
           teamId: team.id,
           ...(body.name ? { name: body.name } : {}),
         },
         create: {
-          email: session.user.email,
+          email: userEmail,
           name: body.name || session.user.name || null,
           role: 'member',
           isRegistered: true,

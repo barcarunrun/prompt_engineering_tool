@@ -7,13 +7,19 @@ const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const teamPasswordHash = await bcrypt.hash("team-password-123", 12);
+
   // 1. チーム作成
   const team = await prisma.team.upsert({
     where: { name: "Default Team" },
-    update: {},
+    update: {
+      teamLoginId: "default-team",
+      teamPasswordHash,
+    },
     create: {
       name: "Default Team",
-      password: await bcrypt.hash("team-password-123", 12),
+      teamLoginId: "default-team",
+      teamPasswordHash,
     },
   });
   console.log("✅ Team created:", team.name);
