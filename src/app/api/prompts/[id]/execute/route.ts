@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth, canAccessTeamScopedResource, getAuthUserScope } from '@/lib/auth';
 import { executeLLM, substituteVariables } from '@/lib/llm';
 
 // POST /api/prompts/[id]/execute — execute prompt against LLM
@@ -9,7 +9,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -24,14 +25,12 @@ export async function POST(
 
   const prompt = await prisma.prompt.findUnique({
     where: { id },
-    include: { user: { select: { teamId: true } } },
   });
   if (!prompt) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const teamId = (session.user as { teamId?: string | null }).teamId;
-  if (teamId && prompt.user?.teamId !== teamId) {
+  if (!canAccessTeamScopedResource(userScope, prompt.teamId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -54,6 +53,7 @@ export async function POST(
         modelId: model,
         input: targetText ?? '',
         output: result.output,
+        teamId: prompt.teamId,
         promptTokens: result.promptTokens,
         completionTokens: result.completionTokens,
         totalTokens: result.totalTokens,

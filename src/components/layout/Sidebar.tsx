@@ -24,6 +24,8 @@ import DataObjectIcon from '@mui/icons-material/DataObject';
 import StorageIcon from '@mui/icons-material/Storage';
 import GroupsIcon from '@mui/icons-material/Groups';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import { useAuth } from '@/hooks/useAuth';
 import { useSession } from 'next-auth/react';
 
@@ -77,6 +79,19 @@ const NAV_ITEMS = [
     icon: <GroupsIcon />,
     exact: false,
     adminOnly: true,
+  },
+];
+
+const HELP_ITEMS = [
+  {
+    label: '認証の使い方',
+    href: '/how-to-auth',
+    icon: <VpnKeyIcon />,
+  },
+  {
+    label: 'ツールの使い方',
+    href: '/how-to-use',
+    icon: <MenuBookIcon />,
   },
 ];
 
@@ -159,6 +174,54 @@ export default function Sidebar({ open, onClose, isMobile }: SidebarProps) {
         </List>
       </Box>
       <Box sx={{ flexGrow: 1 }} />
+      <Divider />
+      <Box sx={{ px: 1, py: 1 }}>
+        <List disablePadding>
+          {HELP_ITEMS.map((item) => {
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            return (
+              <ListItem key={item.href} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                  component={Link}
+                  href={item.href}
+                  selected={isActive}
+                  onClick={isMobile ? onClose : undefined}
+                  sx={{
+                    borderRadius: 1,
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                      '& .MuiListItemIcon-root': {
+                        color: 'white',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 40,
+                      color: isActive ? 'white' : 'text.secondary',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: {
+                        sx: { fontSize: '0.875rem', fontWeight: isActive ? 600 : 400 },
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
+      </Box>
       <Divider />
       <Box sx={{ px: 1, py: 1 }}>
         <List disablePadding>

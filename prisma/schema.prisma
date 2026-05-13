@@ -15,6 +15,9 @@ model Team {
   teamLoginId String?  @unique
   teamPasswordHash String?
   users     User[]
+  prompts   Prompt[]
+  promptVersions PromptVersion[]
+  promptExecutions PromptExecution[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -85,10 +88,14 @@ model Prompt {
   latestVersion Int               @default(1)
   userId        String
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId        String?
+  team          Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   versions      PromptVersion[]
   executions    PromptExecution[]
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+
+  @@index([teamId])
 }
 
 model PromptVersion {
@@ -100,8 +107,12 @@ model PromptVersion {
   description String            @default("")
   userId      String
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   executions  PromptExecution[]
   createdAt   DateTime          @default(now())
+
+  @@index([teamId])
 }
 
 model PromptExecution {
@@ -113,10 +124,14 @@ model PromptExecution {
   modelId         String
   input           String         @db.Text
   output          String         @db.Text
+  teamId          String?
+  team            Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
   promptTokens    Int            @default(0)
   completionTokens Int           @default(0)
   totalTokens     Int            @default(0)
   createdAt       DateTime       @default(now())
+
+  @@index([teamId])
 }
 
 // ─── Target Text Sets ───

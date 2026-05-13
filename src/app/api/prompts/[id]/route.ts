@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth, canAccessTeamScopedResource, getAuthUserScope } from '@/lib/auth';
 
 // GET /api/prompts/[id] — get prompt with latest version
 export async function GET(
@@ -8,17 +8,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { id } = await params;
-  const teamId = (session.user as { teamId?: string | null }).teamId;
 
   const prompt = await prisma.prompt.findUnique({
     where: { id },
     include: {
-      user: { select: { name: true, teamId: true } },
+      user: { select: { name: true } },
       versions: {
         orderBy: { version: 'desc' },
         include: { user: { select: { name: true } } },
@@ -30,8 +30,7 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // チームが異なる場合はアクセス拒否
-  if (teamId && prompt.user?.teamId !== teamId) {
+  if (!canAccessTeamScopedResource(userScope, prompt.teamId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -63,7 +62,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -73,14 +73,12 @@ export async function PUT(
 
   const existing = await prisma.prompt.findUnique({
     where: { id },
-    include: { user: { select: { teamId: true } } },
   });
   if (!existing) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const teamId = (session.user as { teamId?: string | null }).teamId;
-  if (teamId && existing.user?.teamId !== teamId) {
+  if (!canAccessTeamScopedResource(userScope, existing.teamId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -104,10 +102,41 @@ export async function PUT(
         version: newVersion,
         content: content ?? existing.content,
         description: description ?? `v${newVersion} 保存`,
-        userId: session.user.id,
+        userId: userScope.id,
+        teamId: existing.teamId,
       },
     }),
   ]);
 
   return NextResponse.json({ ...prompt, latestVersion: newVersion });
+}
+
+// DELETE /api/prompts/[id] — delete prompt
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const existing = await prisma.prompt.findUnique({
+    where: { id },
+    select: { id: true, teamId: true },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  if (!canAccessTeamScopedResource(userScope, existing.teamId)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  await prisma.prompt.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
 }

@@ -1,6 +1,3 @@
-// 画像は public/how-to-use/step1.png 〜 step6.png として参照します。
-// 必要に応じて画像ファイルを配置してください。
-
 import Image from 'next/image';
 import React from 'react';
 

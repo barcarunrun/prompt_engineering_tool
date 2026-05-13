@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import Link from 'next/link';
 import {
   Box,
   Card,
@@ -90,6 +91,17 @@ export default function SignUpPage() {
           >
             Microsoft アカウントで登録
           </Button>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}
+          >
+            認証手順がわからない場合は{' '}
+            <Link href="/how-to-auth" style={{ color: '#1976d2', textDecoration: 'none' }}>
+              認証の使い方
+            </Link>
+          </Typography>
 
           <Typography
             variant="body2"

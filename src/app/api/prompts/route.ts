@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth, getAuthUserScope, isAdminRole } from '@/lib/auth';
 
 // GET /api/prompts — list all prompts
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const teamId = (session.user as { teamId?: string | null }).teamId;
+  const where = isAdminRole(userScope.role)
+    ? {}
+    : userScope.teamId
+      ? { teamId: userScope.teamId }
+      : { id: { equals: '__no-access__' } };
 
   const prompts = await prisma.prompt.findMany({
-    where: teamId ? { user: { teamId } } : { userId: session.user.id },
+    where,
     orderBy: { updatedAt: 'desc' },
     include: { user: { select: { name: true } } },
   });
@@ -36,8 +41,13 @@ export async function GET() {
 // POST /api/prompts — create a new prompt
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userScope = getAuthUserScope(session);
+  if (!userScope) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!isAdminRole(userScope.role) && !userScope.teamId) {
+    return NextResponse.json({ error: 'Team assignment required' }, { status: 403 });
   }
 
   const body = await request.json();
@@ -55,13 +65,15 @@ export async function POST(request: NextRequest) {
       modelId: modelId ?? 'gpt-4.1',
       status: 'draft',
       latestVersion: 1,
-      userId: session.user.id,
+      userId: userScope.id,
+      teamId: userScope.teamId,
       versions: {
         create: {
           version: 1,
           content: content || '',
           description: '初版作成',
-          userId: session.user.id,
+          userId: userScope.id,
+          teamId: userScope.teamId,
         },
       },
     },

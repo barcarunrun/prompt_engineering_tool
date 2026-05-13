@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { authConfig } from './auth.config';
+import type { Session } from 'next-auth';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -60,3 +61,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+type AuthUserScope = {
+  id: string;
+  role: string;
+  teamId: string | null;
+};
+
+export function getAuthUserScope(session: Session | null): AuthUserScope | null {
+  const userId = session?.user?.id;
+  if (!userId) {
+    return null;
+  }
+
+  return {
+    id: userId,
+    role: (session.user as { role?: string }).role ?? 'viewer',
+    teamId: ((session.user as { teamId?: string | null }).teamId ?? null) as string | null,
+  };
+}
+
+export function isAdminRole(role: string): boolean {
+  return role === 'admin';
+}
+
+export function canAccessTeamScopedResource(user: AuthUserScope, resourceTeamId: string | null): boolean {
+  if (isAdminRole(user.role)) {
+    return true;
+  }
+
+  if (!resourceTeamId) {
+    return false;
+  }
+
+  return user.teamId === resourceTeamId;
+}
