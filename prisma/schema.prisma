@@ -12,6 +12,8 @@ datasource db {
 model Team {
   id        String   @id @default(cuid())
   name      String   @unique
+  teamLoginId String?  @unique
+  teamPasswordHash String?
   users     User[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

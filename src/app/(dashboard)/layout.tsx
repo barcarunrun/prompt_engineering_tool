@@ -18,9 +18,15 @@ export default function DashboardGroupLayout({
     if (status === 'unauthenticated') {
       router.push('/login');
     }
-    // ログイン済みだが未登録 → サインアップ完了ページへ
-    if (status === 'authenticated' && !(session?.user as { isRegistered?: boolean })?.isRegistered) {
-      router.push('/signup/complete');
+    if (status === 'authenticated') {
+      const currentUser = session?.user as { isRegistered?: boolean; teamId?: string | null } | undefined;
+      if (!currentUser?.isRegistered) {
+        if (currentUser?.teamId) {
+          router.push('/login/verify');
+          return;
+        }
+        router.push('/signup');
+      }
     }
   }, [status, session, router]);
 

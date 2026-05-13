@@ -20,6 +20,7 @@ interface TargetTextEditorProps {
   isExecuting: boolean;
   onExecute: () => void;
   tokenUsage?: { prompt: number; completion: number; total: number };
+  responseTime?: number;
 }
 
 export default function TargetTextEditor({
@@ -29,6 +30,7 @@ export default function TargetTextEditor({
   isExecuting,
   onExecute,
   tokenUsage,
+  responseTime,
 }: TargetTextEditorProps) {
   return (
     <Paper
@@ -89,14 +91,24 @@ export default function TargetTextEditor({
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
           実行結果
         </Typography>
-        {tokenUsage && (
-          <Chip
-            label={`${tokenUsage.total.toLocaleString()} tokens`}
-            size="small"
-            variant="outlined"
-            color="info"
-          />
-        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {responseTime !== undefined && (
+            <Chip
+              label={`${(responseTime / 1000).toFixed(2)}s`}
+              size="small"
+              variant="outlined"
+              color="default"
+            />
+          )}
+          {tokenUsage && (
+            <Chip
+              label={`${tokenUsage.total.toLocaleString()} tokens`}
+              size="small"
+              variant="outlined"
+              color="info"
+            />
+          )}
+        </Box>
       </Box>
 
       <Paper

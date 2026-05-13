@@ -222,29 +222,6 @@ export default function UsersPage() {
     </Box>
   );
 }
-import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  TextField,
-  InputAdornment,
-  Avatar,
-  CircularProgress,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-
-interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
   role: string;
   isRegistered: boolean;
   createdAt: string;

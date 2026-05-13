@@ -1,20 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, CircularProgress } from '@mui/material';
-
-export default function SignUpCompletePage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/prompts');
-  }, [router]);
-  return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <CircularProgress />
-    </Box>
-  );
-}
+import { useSession, signOut } from 'next-auth/react';
 import {
   Box,
   Card,
@@ -36,6 +24,20 @@ export default function SignUpCompletePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
+    if (status !== 'authenticated') return;
+    const teamName = sessionStorage.getItem('signup-teamName') || '';
+    const teamLoginId = sessionStorage.getItem('signup-teamLoginId') || '';
+    const teamPassword = sessionStorage.getItem('signup-teamPassword') || '';
+    if (!teamName || !teamLoginId || !teamPassword) {
+      router.replace('/signup');
+    }
+  }, [status, router]);
+
   if (status === 'loading') {
     return (
       <Box
@@ -52,7 +54,6 @@ export default function SignUpCompletePage() {
   }
 
   if (!session) {
-    router.push('/login');
     return null;
   }
 
@@ -60,16 +61,28 @@ export default function SignUpCompletePage() {
     setLoading(true);
     setError('');
     try {
-      const teamId = sessionStorage.getItem('signup-teamId') || '';
+      const teamName = sessionStorage.getItem('signup-teamName') || '';
+      const teamLoginId = sessionStorage.getItem('signup-teamLoginId') || '';
       const teamPassword = sessionStorage.getItem('signup-teamPassword') || '';
+
+      if (!teamName || !teamLoginId || !teamPassword) {
+        router.replace('/signup');
+        return;
+      }
 
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name || session.user.name, teamId, teamPassword }),
+        body: JSON.stringify({
+          name: name || session.user.name,
+          teamName,
+          teamLoginId,
+          teamPassword,
+        }),
       });
 
-      sessionStorage.removeItem('signup-teamId');
+      sessionStorage.removeItem('signup-teamName');
+      sessionStorage.removeItem('signup-teamLoginId');
       sessionStorage.removeItem('signup-teamPassword');
 
       const data = await res.json();
@@ -78,9 +91,8 @@ export default function SignUpCompletePage() {
         throw new Error(data.error || '登録に失敗しました');
       }
 
-      // DB更新成功 → サインアウトして再サインインすることでJWTをリフレッシュ
-      await signOut({ redirect: false });
-      await signIn('microsoft-entra-id', { redirectTo: '/prompts' });
+      await update();
+      router.replace('/prompts');
     } catch (e) {
       console.error('Registration error:', e);
       setError(e instanceof Error ? e.message : '登録に失敗しました');
@@ -126,7 +138,8 @@ export default function SignUpCompletePage() {
               variant="outlined"
               size="large"
               onClick={async () => {
-                sessionStorage.removeItem('signup-teamId');
+                sessionStorage.removeItem('signup-teamName');
+                sessionStorage.removeItem('signup-teamLoginId');
                 sessionStorage.removeItem('signup-teamPassword');
                 await signOut({ redirect: false });
                 router.push('/signup');

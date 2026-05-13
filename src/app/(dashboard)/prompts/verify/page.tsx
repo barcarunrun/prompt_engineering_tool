@@ -27,6 +27,7 @@ export default function PromptVerifyPage() {
     completion: number;
     total: number;
   } | undefined>(undefined);
+  const [responseTime, setResponseTime] = useState<number | undefined>(undefined);
   const [promptName, setPromptName] = useState('');
   const [currentVersion, setCurrentVersion] = useState(1);
   const [versions, setVersions] = useState<PromptVersion[]>([]);
@@ -78,9 +79,11 @@ export default function PromptVerifyPage() {
     setIsExecuting(true);
     setResult('');
     setTokenUsage(undefined);
+    setResponseTime(undefined);
 
     try {
       let res: Response;
+      const startTime = Date.now();
       if (promptId) {
         // DB保存済みプロンプトの場合
         res = await fetch(`/api/prompts/${promptId}/execute`, {
@@ -108,11 +111,13 @@ export default function PromptVerifyPage() {
       }
 
       const data = await res.json();
+      const elapsed = Date.now() - startTime;
       if (!res.ok) {
         setResult(`エラー: ${data.error || '実行に失敗しました'}`);
       } else {
         setResult(data.output);
         setTokenUsage(data.tokenUsage);
+        setResponseTime(elapsed);
       }
     } catch {
       setResult('エラー: ネットワークエラーが発生しました');
@@ -225,6 +230,7 @@ export default function PromptVerifyPage() {
             isExecuting={isExecuting}
             onExecute={handleExecute}
             tokenUsage={tokenUsage}
+            responseTime={responseTime}
           />
         </Grid>
 

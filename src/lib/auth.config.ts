@@ -7,6 +7,7 @@ export const authConfig: NextAuthConfig = {
     MicrosoftEntraID({
       clientId: process.env.AZURE_AD_CLIENT_ID!,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      issuer: process.env.AZURE_AD_ISSUER, // External Entra ID 用
     }),
   ],
   pages: {

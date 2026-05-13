@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
@@ -9,10 +10,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const { teamId } = await request.json();
+    const body = (await request.json()) as { teamLoginId?: string; teamPassword?: string };
+    const teamLoginId = body.teamLoginId?.trim() ?? '';
+    const teamPassword = body.teamPassword?.trim() ?? '';
 
-    if (!teamId) {
-      return NextResponse.json({ error: 'Team IDが必要です' }, { status: 400 });
+    if (!teamLoginId || !teamPassword) {
+      return NextResponse.json({ error: 'Team IDとTeam Passwordが必要です' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
@@ -22,21 +25,33 @@ export async function POST(request: Request) {
     }
 
     if (!user.teamId) {
-      return NextResponse.json({ error: 'チームに所属していません' }, { status: 403 });
+      return NextResponse.json({ error: 'チーム登録が必要です' }, { status: 403 });
     }
 
-    // teamIdがTeamのidまたはnameに一致するか確認
-    const team = await prisma.team.findFirst({
-      where: {
-        OR: [{ id: teamId }, { name: teamId }],
-      },
+    const team = await prisma.team.findUnique({
+      where: { teamLoginId },
     });
 
-    if (!team || user.teamId !== team.id) {
-      return NextResponse.json({ error: 'Team IDが一致しません' }, { status: 403 });
+    if (!team || !team.teamPasswordHash || user.teamId !== team.id) {
+      return NextResponse.json({ error: 'Team IDまたはTeam Passwordが一致しません' }, { status: 403 });
     }
 
-    return NextResponse.json({ success: true, teamId: team.id, teamName: team.name });
+    const isValidPassword = await bcrypt.compare(teamPassword, team.teamPasswordHash);
+    if (!isValidPassword) {
+      return NextResponse.json({ error: 'Team IDまたはTeam Passwordが一致しません' }, { status: 403 });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isRegistered: true },
+    });
+
+    return NextResponse.json({
+      success: true,
+      teamId: team.id,
+      teamName: team.name,
+      teamLoginId: team.teamLoginId,
+    });
   } catch (error) {
     console.error('Team verification error:', error);
     return NextResponse.json({ error: '検証に失敗しました' }, { status: 500 });

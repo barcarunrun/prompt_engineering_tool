@@ -13,13 +13,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!user.email) return false;
       await prisma.user.upsert({
         where: { email: user.email },
-        update: { isRegistered: true },
+        update: {
+          name: user.name ?? undefined,
+          image: user.image ?? undefined,
+          isRegistered: false,
+        },
         create: {
           email: user.email,
           name: user.name ?? null,
           image: user.image ?? null,
           role: 'member',
-          isRegistered: true,
+          isRegistered: false,
         },
       });
       return true;
@@ -31,12 +35,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.isRegistered = (user as { isRegistered?: boolean }).isRegistered ?? false;
         token.teamId = (user as { teamId?: string | null }).teamId ?? null;
       }
-      // セッション更新時にDBから最新を取得
-      if (trigger === 'update' && token.email) {
+      // 初回ログイン・セッション更新時、または未登録フラグ中はDBから最新を取得
+      if ((trigger === 'update' || user || token.isRegistered === false) && token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
         });
         if (dbUser) {
+          token.sub = dbUser.id;
           token.isRegistered = dbUser.isRegistered;
           token.role = dbUser.role;
           token.teamId = dbUser.teamId;
